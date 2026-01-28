@@ -1,0 +1,432 @@
+/* HotelList.css */
+
+:root {
+    --primary-color: #038A5E;
+    --primary-hover: #026b48;
+    --secondary-color: #64748b;
+    --background-light: #f8f9fa;
+    --white: #ffffff;
+    --border-color: #e2e8f0;
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --radius-md: 0.5rem;
+    --radius-lg: 0.75rem;
+}
+
+body {
+    background-color: var(--background-light);
+    color: #1e293b;
+}
+
+.hotel-page-container {
+    padding-top: 100px;
+    /* Offset for fixed navbar */
+    min-height: 100vh;
+    padding-bottom: 4rem;
+}
+
+/* --- Search Section --- */
+.search-section {
+    background: var(--white);
+    padding: 1.5rem;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+    margin-bottom: 2rem;
+    border: 1px solid var(--border-color);
+}
+
+.search-form-row {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.search-input-group {
+    flex: 1;
+    position: relative;
+    min-width: 200px;
+}
+
+.search-input-wrapper {
+    display: flex;
+    align-items: center;
+    background: var(--background-light);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 0.75rem 1rem;
+    transition: all 0.2s;
+}
+
+.search-input-wrapper:focus-within {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(3, 138, 94, 0.1);
+}
+
+.search-icon {
+    color: var(--primary-color);
+    margin-right: 0.75rem;
+}
+
+.search-input {
+    border: none;
+    background: transparent;
+    width: 100%;
+    font-size: 0.95rem;
+    color: #334155;
+    outline: none;
+}
+
+.search-input::placeholder {
+    color: #94a3b8;
+}
+
+.search-btn {
+    background: var(--primary-color);
+    color: var(--white);
+    border: none;
+    padding: 0.75rem 2rem;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+    min-width: 120px;
+}
+
+.search-btn:hover {
+    background: var(--primary-hover);
+}
+
+/* --- Guest Dropdown --- */
+.guest-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    min-width: 300px;
+    background: var(--white);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+    padding: 1.5rem;
+    z-index: 50;
+    margin-top: 0.5rem;
+    border: 1px solid var(--border-color);
+}
+
+.guest-counter-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.counter-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1px solid var(--border-color);
+    background: var(--white);
+    color: var(--primary-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.counter-btn:hover:not(:disabled) {
+    border-color: var(--primary-color);
+    background: rgba(3, 138, 94, 0.05);
+}
+
+.counter-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.apply-btn {
+    width: 100%;
+    background: var(--primary-color);
+    color: var(--white);
+    border: none;
+    padding: 0.5rem;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    margin-top: 1rem;
+}
+
+/* --- Breadcrumbs --- */
+.breadcrumb-nav {
+    margin-bottom: 2rem;
+}
+
+.breadcrumb {
+    background: transparent;
+    padding: 0;
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+.breadcrumb-item a {
+    color: var(--secondary-color);
+    text-decoration: none;
+}
+
+.breadcrumb-item.active {
+    color: var(--primary-color);
+    font-weight: 500;
+}
+
+/* --- Main Layout --- */
+.page-layout {
+    display: flex;
+    gap: 2rem;
+}
+
+.sidebar {
+    width: 280px;
+    flex-shrink: 0;
+}
+
+.content-area {
+    flex: 1;
+}
+
+/* --- Filters --- */
+.filters-card {
+    background: var(--white);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-color);
+    padding: 1.5rem;
+    position: sticky;
+    top: 120px;
+}
+
+.filter-group {
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.filter-group:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.filter-title {
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    color: #0f172a;
+}
+
+.custom-checkbox {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.75rem;
+    cursor: pointer;
+}
+
+.custom-checkbox input {
+    width: 18px;
+    height: 18px;
+    margin-right: 0.75rem;
+    accent-color: var(--primary-color);
+}
+
+.custom-checkbox label {
+    font-size: 0.95rem;
+    color: #475569;
+    cursor: pointer;
+}
+
+/* --- Hotel Card --- */
+.hotel-card {
+    background: var(--white);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-color);
+    overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s;
+    margin-bottom: 1.5rem;
+    display: flex;
+    flex-direction: column;
+}
+
+.hotel-card:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+}
+
+@media (min-width: 768px) {
+    .hotel-card {
+        flex-direction: row;
+        height: 240px;
+    }
+}
+
+.hotel-img-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+@media (min-width: 768px) {
+    .hotel-img-wrapper {
+        width: 300px;
+        flex-shrink: 0;
+    }
+}
+
+.hotel-img {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+}
+
+@media (min-width: 768px) {
+    .hotel-img {
+        height: 100%;
+    }
+}
+
+.hotel-content {
+    padding: 1.5rem;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.hotel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 0.5rem;
+}
+
+.hotel-name {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0;
+}
+
+.rating-badge {
+    background: var(--primary-color);
+    color: var(--white);
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--radius-md);
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+
+.hotel-address {
+    font-size: 0.9rem;
+    color: var(--secondary-color);
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.facilities-preview {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+}
+
+.facility-pill {
+    font-size: 0.8rem;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    background: #f1f5f9;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+}
+
+.hotel-footer {
+    display: flex;
+    justify-content: flex-end;
+    align-items: flex-end;
+    gap: 1.5rem;
+    margin-top: auto;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.price-info {
+    text-align: right;
+}
+
+.price-label {
+    font-size: 0.8rem;
+    color: var(--secondary-color);
+}
+
+.price-value {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.2;
+}
+
+.availability-btn {
+    background: var(--primary-color);
+    color: var(--white);
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.availability-btn:hover {
+    background: var(--primary-hover);
+}
+
+/* Grid View Overrides */
+.grid-view .hotel-card {
+    flex-direction: column;
+    height: auto;
+}
+
+.grid-view .hotel-img-wrapper {
+    width: 100%;
+}
+
+.grid-view .hotel-img {
+    height: 200px;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 991px) {
+    .page-layout {
+        flex-direction: column;
+    }
+
+    .sidebar {
+        width: 100%;
+        margin-bottom: 2rem;
+        display: none;
+        /* Hidden by default on mobile, toggled via modal */
+    }
+
+    .sidebar.d-block {
+        display: block;
+    }
+}
+
+@media (max-width: 768px) {
+    .search-form-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .search-btn {
+        width: 100%;
+    }
+}
