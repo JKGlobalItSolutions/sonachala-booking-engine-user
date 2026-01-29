@@ -1,9 +1,9 @@
 {
-  "name": "sonachala-userfrontend",
+  "name": "sonachala-booking-engine-user",
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "homepage": "https://jkglobalitsolutions.github.io/sonachala-userfrontend",
+  "homepage": "https://JKGlobalItSolutions.github.io/sonachala-booking-engine-user",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

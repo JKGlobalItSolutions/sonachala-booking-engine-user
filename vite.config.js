@@ -31,7 +31,7 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
-  base: '/', // Changed to '/' for local development
+  base: '/sonachala-booking-engine-user/', // Changed to '/' for local development
   server: {
     historyApiFallback: true // ✅ This fixes the 404 on refresh locally
   }
