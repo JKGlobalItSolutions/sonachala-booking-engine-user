@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react"
-import { getFirestore, collection, onSnapshot } from "firebase/firestore"
+import { db } from "../../core/firebase/config"
+import { collection, onSnapshot } from "firebase/firestore"
 import { useNavigate } from "react-router-dom"
-import { MapPin, Wifi, Coffee, Car, Dumbbell, PocketIcon as Pool, CreditCard } from "lucide-react"
+import { MapPin, Wifi, Coffee, Car, Dumbbell, Pocket as Pool, CreditCard } from "lucide-react"
 
 const customBlueColor = "#038A5E"
 

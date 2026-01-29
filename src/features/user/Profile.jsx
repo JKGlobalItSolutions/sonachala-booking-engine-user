@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { getAuth, signOut } from "firebase/auth"
 import { getFirestore, doc, getDoc, setDoc } from "firebase/firestore"
+import { useAuth } from "../../core/contexts/AuthContext"
 import EditProfile from "./EditProfile"
 import MyBookings from "./MyBookings"
 import Favorites from "./Favourites"
@@ -11,8 +12,7 @@ const customRedColor = "#038A5E"
 
 const Profile = () => {
   const navigate = useNavigate()
-  const [user, setUser] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const { currentUser, loading: authLoading } = useAuth()
   const [showLogoutModal, setShowLogoutModal] = useState(false)
   const [activeSection, setActiveSection] = useState("editProfile")
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
@@ -20,32 +20,9 @@ const Profile = () => {
   const [isTablet, setIsTablet] = useState(window.innerWidth <= 1024 && window.innerWidth > 768)
 
   useEffect(() => {
-    const auth = getAuth()
-    const db = getFirestore()
-
-    const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
-      if (currentUser) {
-        const userDocRef = doc(db, "Users", currentUser.uid)
-        const userDoc = await getDoc(userDocRef)
-
-        if (userDoc.exists()) {
-          setUser({ id: currentUser.uid, ...userDoc.data() })
-        } else {
-          const newUserData = {
-            email: currentUser.email,
-            displayName: currentUser.displayName || "",
-            photoURL: currentUser.photoURL || "",
-            createdAt: new Date(),
-          }
-          await setDoc(userDocRef, newUserData)
-          setUser({ id: currentUser.uid, ...newUserData })
-        }
-      } else {
-        setUser(null)
-        navigate("/login")
-      }
-      setLoading(false)
-    })
+    if (!authLoading && !currentUser) {
+      navigate("/login")
+    }
 
     const handleResize = () => {
       const width = window.innerWidth
@@ -60,10 +37,9 @@ const Profile = () => {
     handleResize()
 
     return () => {
-      unsubscribe()
       window.removeEventListener("resize", handleResize)
     }
-  }, [navigate])
+  }, [navigate, currentUser, authLoading])
 
   const handleLogout = () => {
     setShowLogoutModal(true)
@@ -83,7 +59,7 @@ const Profile = () => {
     setIsSidebarOpen(!isSidebarOpen)
   }
 
-  if (loading) {
+  if (authLoading) {
     return (
       <div className="d-flex justify-content-center align-items-center vh-100">
         <div className="spinner-border" role="status" style={{ color: customRedColor }}>
@@ -93,7 +69,7 @@ const Profile = () => {
     )
   }
 
-  if (!user) {
+  if (!currentUser) {
     return <div className="text-center mt-5">Please log in to view your profile.</div>
   }
 
@@ -166,9 +142,9 @@ const Profile = () => {
 
         {/* Main Content */}
         <main className="flex-grow-1 p-lg-4">
-          {activeSection === "editProfile" && <EditProfile user={user} />}
-          {activeSection === "myBookings" && <MyBookings userId={user.id} />}
-          {activeSection === "favorites" && <Favorites userId={user.id} />}
+          {activeSection === "editProfile" && <EditProfile user={currentUser} />}
+          {activeSection === "myBookings" && <MyBookings userId={currentUser.uid} />}
+          {activeSection === "favorites" && <Favorites userId={currentUser.uid} />}
         </main>
       </div>
 

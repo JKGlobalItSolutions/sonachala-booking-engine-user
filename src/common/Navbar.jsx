@@ -258,7 +258,8 @@ function Navbar() {
                         bottom: 0,
                         background: "rgba(255, 255, 255, 0.08)",
                         borderRadius: "12px",
-                        zIndex: "1"
+                        zIndex: "1",
+                        pointerEvents: "none"
                       }}></div>
                     )}
                   </Link>

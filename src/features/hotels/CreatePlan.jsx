@@ -4,6 +4,8 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { useAuth } from "../../core/contexts/AuthContext";
+import { auth } from "../../core/firebase/config";
 import {
   FaWifi,
   FaUtensils,
@@ -29,9 +31,10 @@ import {
 import styled from "styled-components";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { Container, Row, Col, Card, Modal } from "react-bootstrap";
-import { collection, doc, getDoc, getDocs } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, addDoc, setDoc } from "firebase/firestore";
 import { db } from "../../core/firebase/config";
 import { toast } from "react-toastify";
+import PaymentModal from "../../common/PaymentModal";
 
 // Styled Components
 const PageContainer = styled.div`
@@ -440,8 +443,8 @@ const BackToTopButton = styled.button`
   align-items: center;
   cursor: pointer;
   transition: all 0.3s ease;
-  opacity: ${(props) => (props.visible ? "1" : "0")};
-  visibility: ${(props) => (props.visible ? "visible" : "hidden")};
+  opacity: ${(props) => (props.$visible ? "1" : "0")};
+  visibility: ${(props) => (props.$visible ? "visible" : "hidden")};
 
   &:hover {
     background-color: #002d70;
@@ -707,6 +710,8 @@ const CreatePlan = () => {
   const { hotelId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  // Ensure auth is imported
+  const { currentUser } = useAuth ? useAuth() : { currentUser: auth?.currentUser }; // Fallback or use imported hook
   const [rooms, setRooms] = useState([]);
   const [createdRooms, setCreatedRooms] = useState(() => {
     const savedRooms = localStorage.getItem("createdRooms");
@@ -723,6 +728,10 @@ const CreatePlan = () => {
   const [error, setError] = useState(null);
   const [availableRooms, setAvailableRooms] = useState({});
   const [showBackToTop, setShowBackToTop] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [propertyData, setPropertyData] = useState(null);
+  const [collectionName, setCollectionName] = useState("Hotels");
+  const [userDetails, setUserDetails] = useState({ name: "", phone: "" });
 
   const pageTopRef = useRef(null);
   const createdRoomsRef = useRef(createdRooms); // Ref to hold current createdRooms for callbacks
@@ -777,31 +786,63 @@ const CreatePlan = () => {
     try {
       setLoading(true);
 
-      const hotelRef = doc(db, "Hotels", hotelId);
-      const hotelDoc = await getDoc(hotelRef);
+      let hotelRef = doc(db, "Hotels", hotelId);
+      let hotelDoc = await getDoc(hotelRef);
+      let currentColl = "Hotels";
 
       if (!hotelDoc.exists()) {
-        setError("Hotel not found");
+        hotelRef = doc(db, "Homestays", hotelId);
+        hotelDoc = await getDoc(hotelRef);
+        currentColl = "Homestays";
+      }
+
+      if (!hotelDoc.exists()) {
+        setError("Property not found");
         setLoading(false);
         return;
       }
+      setCollectionName(currentColl);
 
       const roomsCollection = collection(hotelRef, "Rooms");
       const roomsSnapshot = await getDocs(roomsCollection);
-      const roomsData = roomsSnapshot.docs.map((doc) => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          ...data,
-          bedType: data.bedType || "Not specified",
-          maxGuestAllowed: Number.parseInt(data.maxguestAllowed) || 2,
-          totalRooms: Number.parseInt(data.totalRooms) || 0,
-          roomPrice: data.roomPrice || "0", // Ensure price is a string for parseFloat
-          perAdultPrice: data.perAdultPrice || "0",
-          perChildPrice: data.perChildPrice || "0",
-          discount: data.discount || "0",
-        };
-      });
+
+      let roomsData = [];
+
+      // Check for new data structure in parent doc
+      const hotelData = hotelDoc.data();
+      setPropertyData(hotelData);
+
+      if (hotelData.roomTypes && Array.isArray(hotelData.roomTypes) && hotelData.roomTypes.length > 0) {
+        roomsData = hotelData.roomTypes.map((room, index) => ({
+          id: `room_${index}`,
+          ...room,
+          roomType: room.name || room.roomType,
+          bedType: room.bedType || "Not specified",
+          maxGuestAllowed: Number.parseInt(room.maxGuestAllowed || room.maxguestAllowed) || 2,
+          totalRooms: Number.parseInt(room.count || room.totalRooms) || 0,
+          roomPrice: room.price || room.roomPrice || "0",
+          perAdultPrice: room.perAdultPrice || "0",
+          perChildPrice: room.perChildPrice || "0",
+          discount: Number.parseFloat(room.discount || "0"),
+          facilities: room.facilities || []
+        }));
+      } else {
+        // Fallback to subcollection
+        roomsData = roomsSnapshot.docs.map((doc) => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            ...data,
+            bedType: data.bedType || "Not specified",
+            maxGuestAllowed: Number.parseInt(data.maxguestAllowed) || 2,
+            totalRooms: Number.parseInt(data.totalRooms) || 0,
+            roomPrice: data.roomPrice || "0",
+            perAdultPrice: data.perAdultPrice || "0",
+            perChildPrice: data.perChildPrice || "0",
+            discount: data.discount || "0",
+          };
+        });
+      }
 
       setRooms(roomsData);
 
@@ -1069,24 +1110,72 @@ const CreatePlan = () => {
     const checkInDate = searchParams.get("checkIn");
     const checkOutDate = searchParams.get("checkOut");
 
-    // Scroll to top before navigating
+    // Scroll to top before showing modal
     scrollToTop();
 
-    navigate(`/reservation/${hotelId}`, {
-      state: {
-        roomDetails: createdRoomsRef.current,
-        totalPrice: calculateTotalPriceForAllRooms(),
-        checkInDate,
-        checkOutDate,
-      },
-    });
-  }, [hotelId, location.search, navigate, calculateTotalPriceForAllRooms]);
+    setShowPaymentModal(true);
+  }, [calculateTotalPriceForAllRooms]);
 
   const scrollToTop = () => {
     window.scrollTo({
       top: 0,
       behavior: "smooth",
     });
+  };
+
+  const handleBookingConfirm = async (modalData) => {
+    try {
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        toast.error("Please login to complete booking");
+        return;
+      }
+
+      const hotelBookingRef = collection(doc(db, "Hotels", hotelId), "Guest Details");
+      const userId = currentUser.uid;
+      const userBookingRef = collection(doc(db, "Users", userId), "Bookings");
+
+      const searchParams = new URLSearchParams(location.search);
+      const checkIn = searchParams.get("checkIn");
+      const checkOut = searchParams.get("checkOut");
+      const checkInDate = checkIn ? new Date(checkIn) : new Date();
+      const checkOutDate = checkOut ? new Date(checkOut) : new Date(Date.now() + 86400000);
+
+      const bookingData = {
+        "Guest Name": modalData?.name || userDetails.name,
+        "Mobile Number": modalData?.phone || userDetails.phone,
+        "Check-In Date": checkInDate,
+        "Check-Out Date": checkOutDate,
+        "Total Amount": Math.round(calculateTotalPriceForAllRooms()),
+        "Pending Amount": 0,
+        "Status": "Booked",
+        "Rooms": createdRooms.map(room => ({
+          roomType: room.roomType,
+          roomsCount: room.totalRooms || 1,
+          price: room.totalPrice,
+          guestCount: room.adults,
+          childrenCount: room.children
+        })),
+        "Booking Date": new Date(),
+        "Payment Status": "Paid",
+        "Property Name": propertyData?.["Property Name"] || "Unknown Property",
+        "Property Address": propertyData?.["Property Address"] || "",
+        "Property Images": propertyData?.exteriorPhotos || propertyData?.["Property Images"] || [],
+        "hotelId": hotelId,
+        "collectionName": collectionName
+      };
+
+      // Save to both locations
+      const hotelDocRef = await addDoc(hotelBookingRef, bookingData);
+      await setDoc(doc(userBookingRef, hotelDocRef.id), bookingData);
+
+      setShowPaymentModal(false);
+      toast.success("Payment Successful! Booking Confirmed.");
+      navigate('/my-bookings');
+    } catch (error) {
+      console.error("Error saving booking:", error);
+      toast.error("Failed to save booking. Please try again.");
+    }
   };
 
   if (loading) return <div>Loading rooms...</div>;
@@ -1158,7 +1247,14 @@ const CreatePlan = () => {
                       </PriceRow>
                     </PriceDetails>
 
-                    <ReserveButton onClick={handleReserve}>Proceed to Reserve</ReserveButton>
+                    <ReserveButton onClick={() => {
+                      if (!auth.currentUser) {
+                        toast.error("Please login to reserve a room");
+                        navigate('/login');
+                        return;
+                      }
+                      handleReserve();
+                    }}>Proceed to Reserve</ReserveButton>
                   </>
                 ) : (
                   <NoRoomsMessage>No rooms selected yet. Select a room to create a plan.</NoRoomsMessage>
@@ -1214,14 +1310,41 @@ const CreatePlan = () => {
                 </PriceRow>
               </PriceDetails>
 
-              <ReserveButton onClick={handleReserve}>Proceed to Reserve</ReserveButton>
+              <ReserveButton onClick={() => {
+                if (!auth.currentUser) {
+                  toast.error("Please login to reserve a room");
+                  navigate('/login');
+                  return;
+                }
+                handleReserve();
+              }}>Proceed to Reserve</ReserveButton>
             </ScrollArea>
           </MobileCreatedRoomsContent>
         </MobileCreatedRoomsPopup>
       )}
-      <BackToTopButton visible={showBackToTop} onClick={scrollToTop}>
+      <BackToTopButton $visible={showBackToTop} onClick={scrollToTop}>
         <FaArrowUp />
       </BackToTopButton>
+
+      <PaymentModal
+        isOpen={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        room={{
+          name: "Multiple Rooms Selected",
+          bedType: `${createdRooms.length} Rooms`,
+          price: calculateTotalPriceForAllRooms()
+        }}
+        property={propertyData}
+        bookingDetails={{
+          checkIn: new URLSearchParams(location.search).get("checkIn"),
+          checkOut: new URLSearchParams(location.search).get("checkOut"),
+          name: userDetails.name,
+          phone: userDetails.phone,
+          onNameChange: (val) => setUserDetails(prev => ({ ...prev, name: val })),
+          onPhoneChange: (val) => setUserDetails(prev => ({ ...prev, phone: val })),
+        }}
+        onConfirm={handleBookingConfirm}
+      />
     </PageContainer>
   );
 };

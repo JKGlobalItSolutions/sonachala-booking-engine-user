@@ -755,7 +755,11 @@ const HotelCard = ({ hotel, onSeeAvailability, viewType }) => {
     <div className="hotel-card" onClick={() => onSeeAvailability(hotel.id)} style={{ cursor: "pointer" }}>
       <div className="hotel-img-wrapper">
         <img
-          src={hotel["Property Images"]?.[0] || "/placeholder.svg"}
+          src={
+            (hotel.exteriorPhotos && hotel.exteriorPhotos.length > 0 ? hotel.exteriorPhotos[0] : null) ||
+            hotel["Property Images"]?.[0] ||
+            "/placeholder.svg"
+          }
           className="hotel-img"
           alt={hotel["Property Name"]}
         />

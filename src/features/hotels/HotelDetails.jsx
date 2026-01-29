@@ -44,6 +44,8 @@ import { toast } from "react-toastify";
 import { format } from "date-fns";
 import { CircularProgressbar, buildStyles } from "react-circular-progressbar";
 import "react-circular-progressbar/dist/styles.css";
+import MapCard from "../../common/MapCard";
+import PaymentModal from "../../common/PaymentModal";
 
 const calculateTotalPrice = (
   roomDetails,
@@ -113,6 +115,8 @@ const HotelDetails = () => {
     price: 0,
     comments: "",
   });
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedRoom, setSelectedRoom] = useState(null);
 
   const fetchPropertyDetails = useCallback(async () => {
     if (!hotelId) {
@@ -621,6 +625,16 @@ const HotelDetails = () => {
     navigate(`/create-plan/${hotelId}?${queryParams}`);
   };
 
+  const handleBookRoom = (room) => {
+    if (!auth.currentUser) {
+      toast.info("Please login to book a room");
+      // Optionally redirect to login
+      return;
+    }
+    setSelectedRoom(room);
+    setShowPaymentModal(true);
+  };
+
   if (loading)
     return (
       <div className="container-fluid vh-100 d-flex justify-content-center align-items-center bg-light">
@@ -694,10 +708,25 @@ const HotelDetails = () => {
 
         <div className="property-gallery-grid mb-5">
           <div className="gallery-main">
-            <img src={property["Property Images"]?.[0] || "/placeholder.svg"} alt="" className="gallery-img-large" />
+            <img
+              src={
+                (property.exteriorPhotos && property.exteriorPhotos.length > 0 ? property.exteriorPhotos[0] : null) ||
+                (property.hotelImages && property.hotelImages.length > 0 ? property.hotelImages[0] : null) ||
+                (property.images && property.images.length > 0 ? property.images[0] : null) ||
+                property["Property Images"]?.[0] ||
+                "/placeholder.svg"
+              }
+              alt=""
+              className="gallery-img-large"
+            />
           </div>
           <div className="gallery-secondary">
-            {property["Property Images"]?.slice(1, 5).map((img, idx) => (
+            {(
+              (property.exteriorPhotos && property.exteriorPhotos.length > 0 ? property.exteriorPhotos.slice(1, 5) : []) ||
+              (property.hotelImages && property.hotelImages.length > 0 ? property.hotelImages.slice(1, 5) : []) ||
+              (property.images && property.images.length > 0 ? property.images.slice(1, 5) : []) ||
+              property["Property Images"]?.slice(1, 5)
+            )?.map((img, idx) => (
               <img key={idx} src={img || "/placeholder.svg"} alt="" className="gallery-img-small" />
             ))}
             {property["Property Images"]?.length > 5 && (
@@ -712,21 +741,66 @@ const HotelDetails = () => {
           <div className="col-12 col-lg-8">
             <div className="ota-card mb-4">
               <h4 className="fw-bold mb-3 border-bottom pb-2">About this property</h4>
-              <p className="text-secondary lh-lg">{property.About}</p>
+              <p className="text-secondary lh-lg">{property.description || property.About}</p>
+
+              <div className="row mt-4">
+                <div className="col-6">
+                  <div className="d-flex align-items-center gap-2">
+                    <i className="fas fa-clock text-success"></i>
+                    <div>
+                      <small className="text-secondary d-block">Check-in</small>
+                      <strong>{property.checkInTime || "12:00 PM"}</strong>
+                    </div>
+                  </div>
+                </div>
+                <div className="col-6">
+                  <div className="d-flex align-items-center gap-2">
+                    <i className="fas fa-clock text-danger"></i>
+                    <div>
+                      <small className="text-secondary d-block">Check-out</small>
+                      <strong>{property.checkOutTime || "11:00 AM"}</strong>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div className="ota-card mb-4">
               <h4 className="fw-bold mb-3 border-bottom pb-2">Popular Facilities</h4>
               <div className="d-flex flex-wrap gap-4 py-2">
-                {property["Accommodation Facilities"]?.map((f, i) => {
-                  const Icon = getFacilityIcon(f.name);
-                  return (
-                    <div key={i} className="d-flex align-items-center gap-2">
-                      <Icon className="text-success" style={{ fontSize: "1.2rem" }} />
-                      <span className="fw-500">{f.name}</span>
-                    </div>
-                  );
-                })}
+                {/* Support for new amenities object format { wifi: true, ac: true } */}
+                {property.amenities && typeof property.amenities === 'object' && !Array.isArray(property.amenities) ? (
+                  Object.entries(property.amenities)
+                    .filter(([key, value]) => value === true)
+                    .map(([key, value], i) => {
+                      // Simple mapping for common keys to display names
+                      const displayName = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+
+                      // Try to match icon
+                      let iconName = key;
+                      if (key.toLowerCase().includes('wifi')) iconName = 'wi-fi';
+                      if (key.toLowerCase().includes('ac') || key.toLowerCase().includes('air')) iconName = 'air conditioning';
+
+                      const Icon = getFacilityIcon(iconName);
+                      return (
+                        <div key={i} className="d-flex align-items-center gap-2">
+                          <Icon className="text-success" style={{ fontSize: "1.2rem" }} />
+                          <span className="fw-500">{displayName}</span>
+                        </div>
+                      );
+                    })
+                ) : (
+                  /* Fallback to old array format */
+                  property["Accommodation Facilities"]?.map((f, i) => {
+                    const Icon = getFacilityIcon(f.name);
+                    return (
+                      <div key={i} className="d-flex align-items-center gap-2">
+                        <Icon className="text-success" style={{ fontSize: "1.2rem" }} />
+                        <span className="fw-500">{f.name}</span>
+                      </div>
+                    );
+                  })
+                )}
               </div>
             </div>
 
@@ -777,38 +851,63 @@ const HotelDetails = () => {
 
           <div className="col-12 col-lg-4">
             <div className="ota-card position-sticky" style={{ top: "120px" }}>
-              <h4 className="fw-bold mb-4">Property Highlights</h4>
-              <ul className="list-unstyled mb-4">
-                {property["Nearby Iconic Places"]?.split("\n").map((place, i) => (
-                  <li key={i} className="d-flex mb-3 small">
-                    <i className="fas fa-check text-success mt-1 me-2"></i>
-                    <span>{place}</span>
-                  </li>
-                ))}
-              </ul>
 
-              <div className="bg-success-subtle p-3 rounded-3 mb-4">
-                <h5 className="fw-bold small mb-3">Booking Selection</h5>
-                <div className="mb-3">
-                  <label className="smaller text-secondary fw-bold">DATES</label>
-                  <input type="text" className="form-control form-control-sm" value={dates} ref={datePickerRef} readOnly />
-                </div>
-                <div className="mb-3">
-                  <label className="smaller text-secondary fw-bold">GUESTS</label>
-                  <div className="form-control form-control-sm cursor-pointer" onClick={handleGuestsClick}>{guests}</div>
-                </div>
+              <MapCard
+                location={property["Property Address"]}
+                latitude={property.latitude}
+                longitude={property.longitude}
+                onOpenMap={() => { }}
+              />
+
+              <h4 className="fw-bold mb-4">Available Rooms</h4>
+
+              <div className="room-list">
+                {property.roomTypes && property.roomTypes.length > 0 ? (
+                  property.roomTypes.map((room, index) => (
+                    <div key={index} className="room-item mb-4 pb-4 border-bottom">
+                      <h5 className="fw-bold mb-1">{room.name}</h5>
+                      <div className="d-flex justify-content-between align-items-center mb-2">
+                        <span className="badge bg-light text-dark">{room.bedType}</span>
+                        <span className="fw-bold text-success">₹{room.price}</span>
+                      </div>
+                      {room.photos && room.photos.length > 0 && (
+                        <div className="mb-2">
+                          <img src={room.photos[0]} alt={room.name} className="img-fluid rounded" style={{ height: '120px', width: '100%', objectFit: 'cover' }} />
+                        </div>
+                      )}
+                      <div className="d-flex justify-content-between align-items-center mt-3">
+                        <span className="small text-secondary">{room.count} rooms left</span>
+                        <button className="ota-btn-primary btn-sm" onClick={() => handleBookRoom(room)}>Book Now</button>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  /* Fallback for old data structure or empty rooms */
+                  <div>
+                    <div className="bg-success-subtle p-3 rounded-3 mb-4">
+                      <h5 className="fw-bold small mb-3">Booking Selection</h5>
+                      <div className="mb-3">
+                        <label className="smaller text-secondary fw-bold">DATES</label>
+                        <input type="text" className="form-control form-control-sm" value={dates} ref={datePickerRef} readOnly />
+                      </div>
+                      <div className="mb-3">
+                        <label className="smaller text-secondary fw-bold">GUESTS</label>
+                        <div className="form-control form-control-sm cursor-pointer" onClick={handleGuestsClick}>{guests}</div>
+                      </div>
+                    </div>
+
+                    <div className="d-flex justify-content-between align-items-end mb-4 border-top pt-3">
+                      <div>
+                        <div className="text-secondary small">Total Price</div>
+                        <div className="h2 fw-800 mb-0 text-dark">₹{property.price?.toFixed(0)}</div>
+                        <div className="text-secondary smaller">Includes taxes & charges</div>
+                      </div>
+                    </div>
+
+                    <button className="ota-btn-primary w-100 py-3" onClick={handleReserveNow}>Reserve Your Stay</button>
+                  </div>
+                )}
               </div>
-
-              <div className="d-flex justify-content-between align-items-end mb-4 border-top pt-3">
-                <div>
-                  <div className="text-secondary small">Total Price</div>
-                  <div className="h2 fw-800 mb-0 text-dark">₹{property.price?.toFixed(0)}</div>
-                  <div className="text-secondary smaller">Includes taxes & charges</div>
-                </div>
-              </div>
-
-              <button className="ota-btn-primary w-100 py-3" onClick={handleReserveNow}>Reserve Your Stay</button>
-              <p className="text-center text-secondary smaller mt-3"><i className="fas fa-info-circle me-1"></i> Selection is not yet a booking</p>
             </div>
           </div>
         </div>
@@ -847,6 +946,76 @@ const HotelDetails = () => {
           .gallery-secondary { grid-template-columns: 1fr 1fr 1fr 1fr; height: 120px; }
         }
       `}} />
+      <PaymentModal
+        isOpen={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        room={selectedRoom}
+        property={property}
+        bookingDetails={{
+          checkIn: dates.split(' - ')[0],
+          checkOut: dates.split(' - ')[1],
+          adults,
+          children
+        }}
+        onConfirm={async (data) => {
+          try {
+            const currentUser = auth.currentUser;
+            if (!currentUser) return;
+
+            const propertyType = property.type || "Hotel";
+            const collectionName = propertyType + "s";
+            const hotelBookingRef = collection(doc(db, collectionName, hotelId), "Guest Details");
+            const userId = currentUser.uid;
+            const userBookingRef = collection(doc(db, "Users", userId), "Bookings");
+
+            const [checkIn, checkOut] = dates.split(" - ");
+            const checkInDate = checkIn ? new Date(checkIn) : new Date();
+            const checkOutDate = checkOut ? new Date(checkOut) : new Date(Date.now() + 86400000);
+
+            const totalAmount = selectedRoom ? calculateTotalPrice(
+              property.roomDetails,
+              getTotalNights(),
+              adults,
+              children,
+              rooms
+            ) : property.price;
+
+            const bookingData = {
+              "Guest Name": data?.name || "",
+              "Mobile Number": data?.phone || "",
+              "Check-In Date": checkInDate,
+              "Check-Out Date": checkOutDate,
+              "Total Amount": Math.round(totalAmount),
+              "Pending Amount": 0,
+              "Status": "Booked",
+              "Rooms": selectedRoom ? [{
+                roomType: selectedRoom.name,
+                roomsCount: rooms,
+                price: selectedRoom.price,
+                guestCount: adults,
+                childrenCount: children
+              }] : [],
+              "Booking Date": new Date(),
+              "Payment Status": "Paid",
+              "Property Name": property["Property Name"] || "Unknown Property",
+              "Property Address": property["Property Address"] || "",
+              "Property Images": property.exteriorPhotos || property["Property Images"] || [],
+              "hotelId": hotelId,
+              "collectionName": collectionName
+            };
+
+            const hotelDocRef = await addDoc(hotelBookingRef, bookingData);
+            await setDoc(doc(userBookingRef, hotelDocRef.id), bookingData);
+
+            setShowPaymentModal(false);
+            toast.success("Payment Successful! Booking Confirmed.");
+            navigate('/my-bookings');
+          } catch (error) {
+            console.error("Error creating booking:", error);
+            toast.error("Failed to confirm booking. Please try again.");
+          }
+        }}
+      />
     </div>
   );
 };

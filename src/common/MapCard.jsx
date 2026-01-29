@@ -11,7 +11,7 @@ import {
   FaSpa,
 } from "react-icons/fa"
 
-const MapCard = ({ location, onOpenMap, hotels }) => {
+const MapCard = ({ location, onOpenMap, hotels, latitude, longitude }) => {
   const getAmenityIcon = (name) => {
     switch (name?.toLowerCase()) {
       case "wi-fi":
@@ -65,7 +65,8 @@ const MapCard = ({ location, onOpenMap, hotels }) => {
         )}
         <div className="ratio ratio-16x9">
           <iframe
-            src={`https://www.google.com/maps/embed/v1/place?key=AIzaSyAba8Pvzm4uXVQs3VKdlqW-JqavRU1yIEs&q=${encodeURIComponent(location)}&zoom=13`}
+            src={`https://www.google.com/maps/embed/v1/place?key=AIzaSyAba8Pvzm4uXVQs3VKdlqW-JqavRU1yIEs&q=${latitude && longitude ? `${latitude},${longitude}` : encodeURIComponent(location)
+              }&zoom=15`}
             width="100%"
             height="100%"
             style={{ border: 0 }}
@@ -127,7 +128,7 @@ const MapCard = ({ location, onOpenMap, hotels }) => {
           white-space: nowrap;
         }
       `}</style>
-    </div>
+    </div >
   )
 }
 

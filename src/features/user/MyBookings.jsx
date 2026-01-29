@@ -1,5 +1,9 @@
 import { useAuth } from "../../core/contexts/AuthContext"
 import CancelBookingPopup from "../../common/CancelBookingPopup"
+import { useState, useEffect } from "react"
+import { db } from "../../core/firebase/config"
+import { collection, getDocs, doc, updateDoc, query, orderBy } from "firebase/firestore"
+import { ChevronLeft, MapPin, List, Grid, Eye } from "lucide-react"
 
 const customRedColor = "#038A5E"
 
@@ -63,7 +67,7 @@ function BookingDetails({ booking, onBack, onCancel }) {
             </div>
 
             <div className="mb-4">
-              <h3 className="h6 mb-3">{booking["Full Name"]}</h3>
+              <h3 className="h6 mb-3">{booking["Guest Name"] || booking["Full Name"]}</h3>
               <div className="row g-3">
                 <div className="col-6">
                   <p className="text-muted small mb-1">Check In</p>
@@ -80,7 +84,7 @@ function BookingDetails({ booking, onBack, onCancel }) {
               </div>
               <div className="mt-3">
                 <p className="text-muted small mb-1">Stay Duration</p>
-                <p className="fw-bold">{booking["Total Nights"]} night</p>
+                <p className="fw-bold">{booking["Total Nights"] || "N/A"} night</p>
               </div>
             </div>
 
@@ -91,7 +95,7 @@ function BookingDetails({ booking, onBack, onCancel }) {
                   <p className="mb-2">Room Type: {roomDetails.roomType || "Standard Room"}</p>
                   <p className="mb-1">Adults: {roomDetails.guestCount || 0}</p>
                   <p className="mb-1">Children: {roomDetails.childrenCount || 0}</p>
-                  <p className="mb-1">Price: ₹{booking["Total Price"].toFixed(2)}</p>
+                  <p className="mb-1">Price: ₹{(Number(booking["Total Amount"] || booking["Total Price"]) || 0).toFixed(2)}</p>
                 </>
               ) : (
                 <p className="text-muted">No room details available</p>
@@ -103,19 +107,19 @@ function BookingDetails({ booking, onBack, onCancel }) {
               <div className="d-flex justify-content-between align-items-center mb-2">
                 <p className="fw-bold mb-0">Total Price</p>
                 <p className="fw-bold mb-0" style={{ color: customRedColor }}>
-                  ₹{booking["Total Price"].toFixed(2)}
+                  ₹{(Number(booking["Total Amount"] || booking["Total Price"]) || 0).toFixed(2)}
                 </p>
               </div>
               <div className="d-flex justify-content-between align-items-center">
                 <p className="fw-bold mb-0">Booking Status</p>
                 <p className="mb-0" style={{ color: customRedColor }}>
-                  {booking["Status"]}
+                  {booking["Status"] || "N/A"}
                 </p>
               </div>
             </div>
-            {booking.Status === "Booked" && new Date(booking["Check-In Date"].toDate()) > new Date() && (
+            {booking.Status === "Booked" && (
               <button
-                onClick={() => onCancel(booking.id)}
+                onClick={() => onCancel(booking)}
                 className="btn btn-primary mt-3"
                 style={{ backgroundColor: customRedColor, borderColor: customRedColor }}
               >
@@ -131,7 +135,7 @@ function BookingDetails({ booking, onBack, onCancel }) {
 
 function MyBookings({ userId: propUserId }) {
   const { currentUser } = useAuth()
-  const userId = propUserId || currentUser?.email
+  const userId = propUserId || currentUser?.uid // Changed email to uid to match common patterns
 
   const [selectedBooking, setSelectedBooking] = useState(null)
   const [bookings, setBookings] = useState([])
@@ -144,22 +148,59 @@ function MyBookings({ userId: propUserId }) {
 
   useEffect(() => {
     const fetchBookings = async () => {
-      const db = getFirestore()
-      const bookingsRef = collection(db, "Users", userId, "Bookings")
-      const bookingsSnapshot = await getDocs(bookingsRef)
+      // Prioritize propUserId, then currentUser.uid
+      // currentUser.email was used as fallback, but Firestore usually uses UID. 
+      // We should check both or standardise on UID. 
+      const effectiveUserId = propUserId || currentUser?.uid;
 
-      const bookingsData = bookingsSnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }))
+      if (!effectiveUserId) {
+        setIsLoading(false);
+        return;
+      }
 
-      setBookings(bookingsData)
-      setFilteredBookings(bookingsData)
-      setIsLoading(false)
+      setIsLoading(true);
+      try {
+        // Ensure we are querying the correct collection path as written in CreatePlan
+        const bookingsRef = collection(db, "Users", effectiveUserId, "Bookings")
+        let bookingsData = [];
+
+        try {
+          // Attempt sorted query
+          const q = query(bookingsRef, orderBy("Booking Date", "desc"))
+          const bookingsSnapshot = await getDocs(q)
+          bookingsData = bookingsSnapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          }))
+        } catch (queryError) {
+          console.warn("Sorted query failed, falling back to unsorted:", queryError);
+          // Fallback to unsorted query and sort in memory
+          const bookingsSnapshot = await getDocs(bookingsRef)
+          bookingsData = bookingsSnapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          }))
+          // Sort by Booking Date desc
+          bookingsData.sort((a, b) => {
+            const dateA = a["Booking Date"]?.toDate?.() || new Date(a["Booking Date"] || 0);
+            const dateB = b["Booking Date"]?.toDate?.() || new Date(b["Booking Date"] || 0);
+            return dateB - dateA;
+          });
+        }
+
+        setBookings(bookingsData)
+        setFilteredBookings(bookingsData)
+      } catch (error) {
+        console.error("Error fetching bookings:", error);
+      } finally {
+        setIsLoading(false)
+      }
     }
 
-    fetchBookings()
-  }, [userId])
+    if (currentUser || propUserId) {
+      fetchBookings()
+    }
+  }, [propUserId, currentUser])
 
   useEffect(() => {
     const now = new Date()
@@ -180,20 +221,34 @@ function MyBookings({ userId: propUserId }) {
     setFilteredBookings(filtered)
   }, [filter, bookings])
 
-  const cancelBooking = async (bookingId) => {
-    setBookingToCancel(bookingId)
+  const cancelBooking = async (booking) => {
+    setBookingToCancel(booking)
     setIsPopupOpen(true)
   }
 
   const confirmCancelBooking = async () => {
-    const db = getFirestore()
+    if (!bookingToCancel) return;
 
     try {
-      const bookingRef = doc(db, "Users", userId, "Bookings", bookingToCancel)
-      await updateDoc(bookingRef, { Status: "Cancelled" })
+      // 1. Update User's Booking Record
+      const userBookingRef = doc(db, "Users", userId, "Bookings", bookingToCancel.id)
+      await updateDoc(userBookingRef, { Status: "Cancelled" })
+
+      // 2. Update Admin/Property Record (Dual Sync)
+      if (bookingToCancel.hotelId && bookingToCancel.collectionName) {
+        try {
+          const hotelBookingRef = doc(db, bookingToCancel.collectionName, bookingToCancel.hotelId, "Guest Details", bookingToCancel.id)
+          await updateDoc(hotelBookingRef, { Status: "Cancelled" })
+          console.log("Admin record updated successfully");
+        } catch (adminError) {
+          console.error("Error updating admin record:", adminError);
+          // We don't necessarily want to fail the whole operation if admin record update fails
+          // but logging it is important.
+        }
+      }
 
       setBookings((prevBookings) =>
-        prevBookings.map((booking) => (booking.id === bookingToCancel ? { ...booking, Status: "Cancelled" } : booking)),
+        prevBookings.map((booking) => (booking.id === bookingToCancel.id ? { ...booking, Status: "Cancelled" } : booking)),
       )
 
       alert("Booking cancelled successfully")
@@ -370,12 +425,14 @@ function MyBookings({ userId: propUserId }) {
                           <span className="badge bg-light text-dark">Room Type: {booking.Rooms[0].roomType}</span>
                           <span className="badge bg-light text-dark">Adults: {booking.Rooms[0].guestCount}</span>
                           <span className="badge bg-light text-dark">Children: {booking.Rooms[0].childrenCount}</span>
-                          <span className="badge bg-light text-dark">₹{booking["Total Price"].toFixed(2)}</span>
+                          <span className="badge bg-light text-dark">
+                            ₹{(Number(booking["Total Amount"]) || 0).toFixed(2)}
+                          </span>
                         </div>
                       )}
-                      {booking.Status === "Booked" && new Date(booking["Check-In Date"].toDate()) > new Date() && (
+                      {booking.Status === "Booked" && (
                         <button
-                          onClick={() => cancelBooking(booking.id)}
+                          onClick={() => cancelBooking(booking)}
                           className="btn btn-sm btn-primary mt-2"
                           style={{ backgroundColor: customRedColor, borderColor: customRedColor }}
                         >

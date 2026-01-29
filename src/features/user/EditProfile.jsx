@@ -1,50 +1,40 @@
 import React, { useState, useEffect } from "react"
-import { getAuth, updateProfile } from "firebase/auth"
-import { getFirestore, doc, getDoc, updateDoc } from "firebase/firestore"
-import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage"
+import { db, auth, storage } from "../../core/firebase/config"
+import { updateProfile } from "firebase/auth"
+import { doc, getDoc, updateDoc } from "firebase/firestore"
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage"
 import { useAuth } from "../../core/contexts/AuthContext"
-import { Camera, User, Mail, Calendar, Phone, MapPin } from "lucide-react"
 
 const customRedColor = "#038A5E"
 
-const EditProfile = () => {
+const EditProfile = ({ user: initialUser }) => {
   const { currentUser } = useAuth()
   const [formData, setFormData] = useState({
-    fullName: "",
-    email: "",
-    mobileNumber: "",
-    address: "",
-    dob: "",
-    profilePicture: null,
-    fcmToken: "",
+    fullName: initialUser?.["Full Name"] || initialUser?.fullName || currentUser?.displayName || "",
+    email: initialUser?.["Email Address"] || initialUser?.email || currentUser?.email || "",
+    mobileNumber: initialUser?.["Mobile Number"] || initialUser?.mobileNumber || "",
+    address: initialUser?.Address || initialUser?.address || "",
+    dob: initialUser?.DOB || initialUser?.dob || "",
+    profilePicture: initialUser?.ProfilePicture || initialUser?.profilePicture || currentUser?.photoURL || "",
+    fcmToken: initialUser?.fcmToken || "",
   })
   const [isLoading, setIsLoading] = useState(false)
-  const [previewUrl, setPreviewUrl] = useState(null)
+  const [previewUrl, setPreviewUrl] = useState(initialUser?.ProfilePicture || currentUser?.photoURL)
 
   useEffect(() => {
-    const fetchUserData = async () => {
-      if (currentUser?.uid) {
-        const db = getFirestore()
-        const userDoc = await getDoc(doc(db, "Users", currentUser.uid))
-
-        if (userDoc.exists()) {
-          const userData = userDoc.data()
-          setFormData({
-            fullName: userData["Full Name"] || currentUser.displayName || "",
-            email: userData["Email Address"] || currentUser.email || "",
-            mobileNumber: userData["Mobile Number"] || "",
-            address: userData["Address"] || "",
-            dob: userData["DOB"] || "",
-            profilePicture: userData["ProfilePicture"] || currentUser.photoURL || "",
-            fcmToken: userData["fcmToken"] || "",
-          })
-          setPreviewUrl(userData["ProfilePicture"] || currentUser.photoURL)
-        }
-      }
+    if (initialUser) {
+      setFormData({
+        fullName: initialUser["Full Name"] || initialUser.fullName || currentUser?.displayName || "",
+        email: initialUser["Email Address"] || initialUser.email || currentUser?.email || "",
+        mobileNumber: initialUser["Mobile Number"] || initialUser.mobileNumber || "",
+        address: initialUser.Address || initialUser.address || "",
+        dob: initialUser.DOB || initialUser.dob || "",
+        profilePicture: initialUser.ProfilePicture || initialUser.profilePicture || currentUser?.photoURL || "",
+        fcmToken: initialUser.fcmToken || "",
+      })
+      setPreviewUrl(initialUser.ProfilePicture || initialUser.profilePicture || currentUser?.photoURL)
     }
-
-    fetchUserData()
-  }, [currentUser])
+  }, [initialUser, currentUser])
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -184,7 +174,7 @@ const EditProfile = () => {
                   className="position-absolute bottom-0 end-0 p-2 rounded-circle cursor-pointer shadow"
                   style={{ backgroundColor: customRedColor, cursor: "pointer" }}
                 >
-                  <Camera className="text-white" />
+                  <span style={{ fontSize: "2rem" }}>📷</span>
                   <input
                     type="file"
                     id="profilePicture"
@@ -205,7 +195,7 @@ const EditProfile = () => {
               </label>
               <div style={inputGroupStyle}>
                 <span style={inputGroupTextStyle}>
-                  <User style={{ color: customRedColor }} />
+                  <span style={{ color: customRedColor }}>👤</span>
                 </span>
                 <input
                   type="text"
@@ -226,7 +216,7 @@ const EditProfile = () => {
               </label>
               <div style={inputGroupStyle}>
                 <span style={inputGroupTextStyle}>
-                  <Mail style={{ color: customRedColor }} />
+                  <span style={{ color: customRedColor }}>✉️</span>
                 </span>
                 <input
                   type="email"
@@ -247,7 +237,7 @@ const EditProfile = () => {
               </label>
               <div style={inputGroupStyle}>
                 <span style={inputGroupTextStyle}>
-                  <Calendar style={{ color: customRedColor }} />
+                  <span style={{ color: customRedColor }}>📅</span>
                 </span>
                 <input
                   type="date"
@@ -266,7 +256,7 @@ const EditProfile = () => {
               </label>
               <div style={inputGroupStyle}>
                 <span style={inputGroupTextStyle}>
-                  <Phone style={{ color: customRedColor }} />
+                  <span style={{ color: customRedColor }}>📞</span>
                 </span>
                 <input
                   type="tel"
@@ -286,7 +276,7 @@ const EditProfile = () => {
               </label>
               <div style={inputGroupStyle}>
                 <span style={inputGroupTextStyle}>
-                  <MapPin style={{ color: customRedColor }} />
+                  <span style={{ color: customRedColor }}>📍</span>
                 </span>
                 <input
                   type="text"

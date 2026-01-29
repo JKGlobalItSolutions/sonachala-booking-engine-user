@@ -840,7 +840,11 @@ const HotelCard = ({ hotel, onSeeAvailability, viewType }) => {
       <div className="card h-100 shadow-sm" onClick={() => onSeeAvailability(hotel.id)} style={{ cursor: "pointer" }}>
         <div className="position-relative">
           <img
-            src={hotel["Property Images"]?.[0] || "/placeholder.svg?height=200&width=300"}
+            src={
+              (hotel.exteriorPhotos && hotel.exteriorPhotos.length > 0 ? hotel.exteriorPhotos[0] : null) ||
+              hotel["Property Images"]?.[0] ||
+              "/placeholder.svg?height=200&width=300"
+            }
             className="card-img-top"
             alt={`${hotel["Property Name"]}`}
             style={{ height: "200px", objectFit: "cover" }}
@@ -884,7 +888,11 @@ const HotelCard = ({ hotel, onSeeAvailability, viewType }) => {
       <div className="row g-0">
         <div className="col-md-4 position-relative">
           <img
-            src={hotel["Property Images"]?.[0] || "/placeholder.svg?height=200&width=300"}
+            src={
+              (hotel.exteriorPhotos && hotel.exteriorPhotos.length > 0 ? hotel.exteriorPhotos[0] : null) ||
+              hotel["Property Images"]?.[0] ||
+              "/placeholder.svg?height=200&width=300"
+            }
             className="img-fluid rounded-start"
             alt={`${hotel["Property Name"]}`}
             style={{ height: "100%", objectFit: "cover" }}

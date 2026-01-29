@@ -31,7 +31,7 @@ export function AuthProvider({ children }) {
       const result = await signInWithEmailAndPassword(userAuth, email, password);
       const user = result.user;
 
-      const userRef = doc(userDB, 'users', user.email);
+      const userRef = doc(userDB, 'Users', user.uid);
       const snap = await getDoc(userRef);
 
       if (!snap.exists()) {
@@ -50,7 +50,7 @@ export function AuthProvider({ children }) {
     const unsubscribe = onAuthStateChanged(userAuth, async (user) => {
       if (user) {
         // Get the user's Firestore data - only allow if user exists
-        const userRef = doc(userDB, 'users', user.email);
+        const userRef = doc(userDB, 'Users', user.uid);
         const userSnap = await getDoc(userRef);
 
         if (userSnap.exists()) {
